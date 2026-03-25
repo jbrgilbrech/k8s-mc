@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  # The StatefulSet runs exactly one long-lived Minecraft server pod.
+  name: minecraft
+  namespace: minecraft
+spec:
+  # A headless service is not required for this simple setup because
+  # we are not clustering multiple replicas together. We still point
+  # serviceName at the normal service name for stable identity wiring.
+  serviceName: minecraft
+
+  # Run a single Minecraft server instance.
+  replicas: 1
+
+  selector:
+    matchLabels:
+      # These labels must match the pod template labels below.
+      app: minecraft
+
+  template:
+    metadata:
+      labels:
+        # The service uses this label to find the pod.
+        app: minecraft
+    spec:
+      containers:
+        - name: minecraft
+          # This image is the standard community image for Minecraft servers.
+          image: itzg/minecraft-server:latest
+
+          # This keeps the node from pulling the image every time
+          # if it already has a local copy.
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 25565
+              name: minecraft
+              protocol: TCP
+
+          env:
+            - name: EULA
+              # Mojang requires explicit EULA acceptance.
+              # The container will not start the server unless this is true.
+              value: "TRUE"
+
+            - name: TYPE
+              # VANILLA keeps the base setup simple.
+              # You can switch this later to PAPER, FABRIC, FORGE, and others.
+              value: "VANILLA"
+
+            - name: VERSION
+              # LATEST pulls the current latest supported Minecraft release
+              # from the image at startup time.
+              value: "LATEST"
+
+            - name: MEMORY
+              # Keep memory conservative for a small starter server.
+              # Increase this if the node has room and the player count grows.
+              value: "2G"
+
+            - name: MOTD
+              # This text shows in the Minecraft server list.
+              value: "Kubernetes Minecraft Server"
+
+          resources:
+            requests:
+              # Requests reserve a minimum amount of CPU and memory.
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              # Limits prevent the container from consuming unbounded resources.
+              cpu: "1"
+              memory: "3Gi"
+
+          volumeMounts:
+            - name: minecraft-data
+              # The image stores the Minecraft world and config under /data.
+              mountPath: /data
+
+      volumes:
+        - name: minecraft-data
+          persistentVolumeClaim:
+            # Reuse the PVC defined in pvc.yaml for persistent world storage.
+            claimName: minecraft-data

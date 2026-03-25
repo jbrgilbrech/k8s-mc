@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # This PVC holds the actual Minecraft world and server data.
+  # If this claim is lost and your storage backend deletes the volume,
+  # your world can be lost with it.
+  name: minecraft-data
+  namespace: minecraft
+spec:
+  accessModes:
+    # ReadWriteOnce is the normal choice for a single Minecraft server pod.
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Keep the starter request modest.
+      # Increase this if you plan to keep the world long term.
+      storage: 10Gi
+
+  # If your cluster does not have a default StorageClass,
+  # uncomment the next line and set the exact class name.
+  # storageClassName: standard
